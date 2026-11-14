@@ -1,0 +1,20 @@
+{
+  "name": "CCTV·정보통신 견적 계산기",
+  "short_name": "CCTV 견적",
+  "description": "CCTV·정보통신 시공 견적을 현장에서 바로 계산하는 웹 도구",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1f7",
+  "theme_color": "#12308f",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

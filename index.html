@@ -111,6 +111,11 @@
   }
   .basis b{color:#22304c;font-weight:700}
   .mode-seg{margin-bottom:11px}
+  .mode-label{
+    font-size:11px;font-weight:700;color:#1e4ed8;background:#eaefff;
+    border:1px solid #c9d8fb;padding:2px 8px;border-radius:999px;
+  }
+  .mode-label[data-mode="repair"]{color:#b45309;background:#fff7ed;border-color:#fbd9a5}
   .sets{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
   .set-btn{
     cursor:pointer;font-size:12.5px;font-weight:650;
@@ -374,6 +379,7 @@
   <section class="card no-print">
     <div class="card-head">
       <h2>품목 <span class="count" id="itemCount">0</span></h2>
+      <span class="mode-label" id="modeLabel" data-mode="install">신규 설치</span>
       <label class="switch" title="원가·마진 칸을 화면에서 숨깁니다">
         <input type="checkbox" id="costToggle" checked>
         <i></i><span>원가 표시</span>
@@ -543,6 +549,10 @@
   function currentMode() {
     return state && state.mode === 'repair' ? 'repair' : 'install';
   }
+  // 지금 화면의 견적(모드별 items·부가세·절사)
+  function Q() {
+    return state.quotes[currentMode()];
+  }
   function modePresets() {
     return PRESETS[currentMode()] || PRESETS.install;
   }
@@ -628,15 +638,18 @@
     };
   }
 
+  // 한 견적(모드별)의 기본값 — 신규 설치·고장 수리는 서로 섞이지 않게 따로 담는다.
+  function newQuote() {
+    return { items: [newItem(feePreset())], vat: 'excl', rounding: 0 };
+  }
+
   function freshState() {
     var iso = todayISO();
     return {
       meta: { site: '', date: iso, no: autoNo(iso), issuer: '', memo: '' },
-      items: [newItem(feePreset())],
-      vat: 'excl',
-      rounding: 0,
       mode: 'install',
-      showCost: true
+      showCost: true,
+      quotes: { install: newQuote(), repair: newQuote() }
     };
   }
 
@@ -657,13 +670,33 @@
     var base = freshState();
     var st = {
       meta: Object.assign({}, base.meta, saved.meta || {}),
-      items: Array.isArray(saved.items) ? saved.items : base.items,
-      vat: saved.vat === 'incl' ? 'incl' : 'excl',
-      rounding: [0, 1000, 10000].indexOf(saved.rounding) !== -1 ? saved.rounding : 0,
       mode: saved.mode === 'repair' ? 'repair' : 'install',
-      showCost: saved.showCost !== false
+      showCost: saved.showCost !== false,
+      quotes: { install: newQuote(), repair: newQuote() }
     };
-    st.items = st.items.filter(function (it) { return it && typeof it === 'object'; }).map(function (it) {
+    // 이전 버전(최상위 items) 형식이면 신규 설치 견적으로 옮긴다.
+    var src = (saved.quotes && typeof saved.quotes === 'object')
+      ? saved.quotes
+      : { install: { items: saved.items, vat: saved.vat, rounding: saved.rounding } };
+    ['install', 'repair'].forEach(function (mk) {
+      var q = src[mk];
+      if (!q || typeof q !== 'object') return;
+      var items = sanitizeItems(q.items);
+      if (items.length) st.quotes[mk].items = items;
+      st.quotes[mk].vat = q.vat === 'incl' ? 'incl' : 'excl';
+      st.quotes[mk].rounding = [0, 1000, 10000].indexOf(Number(q.rounding)) !== -1 ? Number(q.rounding) : 0;
+    });
+    // 두 견적 모두 기본 출장료를 무조건 채운다.
+    ['install', 'repair'].forEach(function (mk) {
+      if (!hasFeeRowIn(st.quotes[mk].items)) st.quotes[mk].items.unshift(newItem(feePreset()));
+    });
+    if (!st.meta.date) st.meta.date = base.meta.date;
+    if (!st.meta.no) st.meta.no = autoNo(st.meta.date);
+    state = st;
+  }
+
+  function sanitizeItems(list) {
+    return (Array.isArray(list) ? list : []).filter(function (it) { return it && typeof it === 'object'; }).map(function (it) {
       return {
         id: it.id || uid(),
         name: typeof it.name === 'string' ? it.name : '',
@@ -672,11 +705,6 @@
         cost: Math.round(Number(it.cost) || 0)
       };
     });
-    if (!st.meta.date) st.meta.date = base.meta.date;
-    if (!st.meta.no) st.meta.no = autoNo(st.meta.date);
-    // 이전 버전에서 저장된 견적에도 기본 출장료를 무조건 채운다.
-    if (!hasFeeRowIn(st.items)) st.items.unshift(newItem(feePreset()));
-    state = st;
   }
 
   var saveTimer = null;
@@ -692,7 +720,7 @@
   /* ── 계산 ─────────────────────────────── */
   function compute() {
     var rows = [], rawSum = 0, costSum = 0;
-    state.items.forEach(function (it) {
+    Q().items.forEach(function (it) {
       var amt = Math.round((it.qty || 0) * (it.price || 0));
       var cost = Math.round((it.qty || 0) * (it.cost || 0));
       rawSum += amt;
@@ -701,12 +729,12 @@
     });
 
     var supply, vat, total;
-    if (state.vat === 'incl') {
-      total = truncTo(rawSum, state.rounding);
+    if (Q().vat === 'incl') {
+      total = truncTo(rawSum, Q().rounding);
       vat = Math.round(total * 0.1 / 1.1);
       supply = total - vat;
     } else {
-      supply = truncTo(rawSum, state.rounding);
+      supply = truncTo(rawSum, Q().rounding);
       vat = Math.round(supply * 0.1);
       total = supply + vat;
     }
@@ -786,10 +814,10 @@
     def.items.forEach(function (d) {
       var preset = list[d.p];
       if (!preset) return;
-      if (preset.fee && hasFeeRowIn(state.items)) return;
+      if (preset.fee && hasFeeRowIn(Q().items)) return;
       var it = newItem(preset);
       it.qty = d.qty;
-      state.items.push(it);
+      Q().items.push(it);
     });
     cleanupEmptyRows();
     syncRows();
@@ -833,8 +861,8 @@
 
   function syncRows(focusId, focusSelector) {
     var rowsEl = $('#rows');
-    rowsEl.innerHTML = state.items.map(rowHtml).join('');
-    $('#itemCount').textContent = String(state.items.length);
+    rowsEl.innerHTML = Q().items.map(rowHtml).join('');
+    $('#itemCount').textContent = String(Q().items.length);
     if (focusId) {
       var el = rowsEl.querySelector('.row[data-id="' + focusId + '"] ' + (focusSelector || '.row-price'));
       if (el) { try { el.focus(); el.select && el.select(); } catch (e) {} }
@@ -845,7 +873,7 @@
   function updateTotals() {
     var c = compute();
 
-    state.items.forEach(function (it) {
+    Q().items.forEach(function (it) {
       var rowEl = document.querySelector('.row[data-id="' + it.id + '"]');
       if (!rowEl) return;
       var amt = Math.round((it.qty || 0) * (it.price || 0));
@@ -869,7 +897,7 @@
     $('#sumSupply').textContent = wonUnit(c.supply);
     $('#sumVat').textContent = wonUnit(c.vat);
     $('#sumTotal').textContent = wonUnit(c.total);
-    $('#vatLabel').textContent = state.vat === 'incl' ? '부가세 (포함 10%)' : '부가세 (10%)';
+    $('#vatLabel').textContent = Q().vat === 'incl' ? '부가세 (포함 10%)' : '부가세 (10%)';
     $('#koreanAmt').textContent = koreanAmount(c.total);
     $('#bbTotal').textContent = wonUnit(c.total);
 
@@ -883,7 +911,7 @@
     fill.style.width = w + '%';
     $('#marginBar').classList.toggle('neg', c.profit < 0);
 
-    $('#emptyState').style.display = state.items.length ? 'none' : 'block';
+    $('#emptyState').style.display = Q().items.length ? 'none' : 'block';
 
     renderPrint(c);
     save();
@@ -914,14 +942,15 @@
     }).join('') : '<tr><td colspan="5" class="c">내용 없음</td></tr>';
 
     var notes = [];
-    notes.push(state.vat === 'incl' ? '※ 상기 금액은 부가세(VAT) 포함 금액입니다.' : '※ 상기 금액은 부가세(VAT) 별도 금액입니다.');
-    if (state.rounding) notes.push('※ 단수 처리: ' + roundLabel(state.rounding) + ' 적용');
+    notes.push(Q().vat === 'incl' ? '※ 상기 금액은 부가세(VAT) 포함 금액입니다.' : '※ 상기 금액은 부가세(VAT) 별도 금액입니다.');
+    if (Q().rounding) notes.push('※ 단수 처리: ' + roundLabel(Q().rounding) + ' 적용');
     notes.push('※ 견적 유효기간은 발행일로부터 30일입니다.');
     if (meta.memo && meta.memo.trim()) {
       meta.memo.trim().split(/\n+/).forEach(function (line) { notes.push('※ ' + esc(line)); });
     }
 
-    var metaRows = [];
+    var modeLabel = currentMode() === 'repair' ? '고장 수리' : '신규 설치';
+    var metaRows = ['<tr><th>작업 구분</th><td>' + modeLabel + '</td></tr>'];
     if (meta.no) metaRows.push('<tr><th>견적번호</th><td>' + esc(meta.no) + '</td></tr>');
     if (meta.date) metaRows.push('<tr><th>견적일</th><td>' + koreanDate(meta.date) + '</td></tr>');
     if (meta.site && meta.site.trim()) metaRows.push('<tr><th>수신</th><td>' + esc(meta.site.trim()) + '</td></tr>');
@@ -961,7 +990,7 @@
     var lines = [];
     var rows = c.rows.filter(function (r) { return (r.name && r.name.trim()) || r.price > 0; });
 
-    lines.push('[견적서]' + (meta.site && meta.site.trim() ? ' ' + meta.site.trim() : ''));
+    lines.push('[견적서 · ' + (currentMode() === 'repair' ? '고장 수리' : '신규 설치') + ']' + (meta.site && meta.site.trim() ? ' ' + meta.site.trim() : ''));
     if (meta.date) lines.push('일자 ' + koreanDate(meta.date) + (meta.no ? ' · ' + meta.no : ''));
     lines.push('');
 
@@ -974,7 +1003,7 @@
     }
     lines.push('');
 
-    if (state.vat === 'incl') {
+    if (Q().vat === 'incl') {
       lines.push('합계 ' + wonUnit(c.total) + ' (부가세 포함)');
       lines.push('공급가액 ' + wonUnit(c.supply) + ' / 부가세 ' + wonUnit(c.vat));
     } else {
@@ -983,7 +1012,7 @@
       lines.push('합계 ' + wonUnit(c.total));
     }
     lines.push('일금 ' + koreanAmount(c.total) + ' 원정');
-    if (state.rounding) lines.push('(' + roundLabel(state.rounding) + ')');
+    if (Q().rounding) lines.push('(' + roundLabel(Q().rounding) + ')');
     lines.push('');
     lines.push('※ 견적 유효기간 30일');
     if (meta.memo && meta.memo.trim()) lines.push('※ ' + meta.memo.trim());
@@ -1036,7 +1065,7 @@
 
   /* ── 입력 → 상태 ──────────────────────── */
   function findItem(id) {
-    for (var i = 0; i < state.items.length; i++) if (state.items[i].id === id) return state.items[i];
+    for (var i = 0; i < Q().items.length; i++) if (Q().items[i].id === id) return Q().items[i];
     return null;
   }
 
@@ -1067,10 +1096,10 @@
     document.body.classList.toggle('hide-cost', state.showCost === false);
 
     document.querySelectorAll('#vatSeg button').forEach(function (b) {
-      b.classList.toggle('on', b.getAttribute('data-vat') === state.vat);
+      b.classList.toggle('on', b.getAttribute('data-vat') === Q().vat);
     });
     document.querySelectorAll('#roundSeg button').forEach(function (b) {
-      b.classList.toggle('on', Number(b.getAttribute('data-round')) === state.rounding);
+      b.classList.toggle('on', Number(b.getAttribute('data-round')) === Q().rounding);
     });
 
     $('#siteName').addEventListener('input', function (e) {
@@ -1107,7 +1136,7 @@
 
     document.querySelectorAll('#vatSeg button').forEach(function (b) {
       b.addEventListener('click', function () {
-        state.vat = b.getAttribute('data-vat');
+        Q().vat = b.getAttribute('data-vat');
         document.querySelectorAll('#vatSeg button').forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on');
         updateTotals();
@@ -1115,7 +1144,7 @@
     });
     document.querySelectorAll('#roundSeg button').forEach(function (b) {
       b.addEventListener('click', function () {
-        state.rounding = Number(b.getAttribute('data-round'));
+        Q().rounding = Number(b.getAttribute('data-round'));
         document.querySelectorAll('#roundSeg button').forEach(function (x) { x.classList.remove('on'); });
         b.classList.add('on');
         updateTotals();
@@ -1127,12 +1156,12 @@
       if (!btn) return;
       var preset = modePresets()[Number(btn.getAttribute('data-preset'))];
       if (!preset) return;
-      if (preset.fee && hasFeeRowIn(state.items)) {
+      if (preset.fee && hasFeeRowIn(Q().items)) {
         toast('기본 출장료는 이미 포함되어 있어요');
         return;
       }
       var it = newItem(preset);
-      state.items.push(it);
+      Q().items.push(it);
       syncRows(it.id, '.row-price');
       updateTotals();
       toast(preset.short + ' 추가');
@@ -1144,7 +1173,10 @@
         renderPresets();
         renderSets();
         renderBasis();
-        save();
+        syncRows();
+        bindStaticValues();
+        updateTotals();
+        toast((currentMode() === 'repair' ? '고장 수리' : '신규 설치') + ' 견적으로 전환 — 두 견적은 따로 계산됩니다');
       });
     });
 
@@ -1210,7 +1242,7 @@
       var it = findItem(id);
       if (!it) return;
       if (e.target.closest('[data-del]')) {
-        state.items = state.items.filter(function (x) { return x.id !== id; });
+        Q().items = Q().items.filter(function (x) { return x.id !== id; });
         syncRows();
         updateTotals();
         toast('품목을 삭제했어요');
@@ -1246,16 +1278,21 @@
     $('#costToggle').checked = state.showCost !== false;
     document.body.classList.toggle('hide-cost', state.showCost === false);
     document.querySelectorAll('#vatSeg button').forEach(function (b) {
-      b.classList.toggle('on', b.getAttribute('data-vat') === state.vat);
+      b.classList.toggle('on', b.getAttribute('data-vat') === Q().vat);
     });
     document.querySelectorAll('#roundSeg button').forEach(function (b) {
-      b.classList.toggle('on', Number(b.getAttribute('data-round')) === state.rounding);
+      b.classList.toggle('on', Number(b.getAttribute('data-round')) === Q().rounding);
     });
+    var ml = $('#modeLabel');
+    if (ml) {
+      ml.textContent = currentMode() === 'repair' ? '고장 수리' : '신규 설치';
+      ml.setAttribute('data-mode', currentMode());
+    }
   }
 
   function cleanupEmptyRows() {
     var keep = null;
-    state.items = state.items.filter(function (it) {
+    Q().items = Q().items.filter(function (it) {
       var empty = !it.name.trim() && !it.price && !it.cost;
       if (empty) return false;
       return true;
@@ -1266,7 +1303,7 @@
   function addRow() {
     var it = newItem(null);
     cleanupEmptyRows();
-    state.items.push(it);
+    Q().items.push(it);
     syncRows(it.id, '.row-name');
     updateTotals();
   }

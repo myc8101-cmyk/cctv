@@ -127,6 +127,12 @@
   .set-btn small{font-size:10.5px;color:var(--muted);font-weight:650;font-variant-numeric:tabular-nums}
   .set-btn:active{background:#eef3ff;border-color:#a9c0f0}
   .set-btn.ghost{border-style:dashed;color:var(--brand);border-color:#b9caf0;background:#f8faff}
+  .mix-note{
+    display:none;margin-top:11px;padding:9px 11px;border-radius:10px;
+    background:#eef4ff;border:1px solid #d2e0fb;
+    font-size:11.5px;line-height:1.55;color:#2b3f66;font-weight:600;
+  }
+  .mix-note b{color:#1e4ed8;font-weight:750}
 
   /* ── 품목 행 ─────────────────────────── */
   .rows{display:grid;gap:10px}
@@ -373,6 +379,7 @@
     <div class="chips" id="presetChips"></div>
     <p class="basis" id="basisNote"></p>
     <div class="sets" id="setBtns"></div>
+    <p class="mix-note" id="mixNote"><b>아날로그·IP 혼합 구성(하이브리드)도 가능합니다</b> — 원하는 카메라를 섞어 담아 보세요. 아래 <b>혼합 4대</b> 세트로 시작할 수도 있습니다.</p>
   </section>
 
   <!-- 품목 -->
@@ -528,16 +535,17 @@
       analog4: { label: '아날로그 4대 세트', items: [ { p: 0, qty: 1 }, { p: 1, qty: 2 }, { p: 2, qty: 2 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ] },
       analog8: { label: '아날로그 8대 세트', items: [ { p: 0, qty: 1 }, { p: 1, qty: 4 }, { p: 2, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ] },
       ip4: { label: 'IP 4대 세트', items: [ { p: 0, qty: 1 }, { p: 3, qty: 2 }, { p: 4, qty: 2 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ] },
-      ip8: { label: 'IP 8대 세트', items: [ { p: 0, qty: 1 }, { p: 3, qty: 4 }, { p: 4, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ] }
+      ip8: { label: 'IP 8대 세트', items: [ { p: 0, qty: 1 }, { p: 3, qty: 4 }, { p: 4, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ] },
+      mix4: { label: '혼합 4대 (아날2+IP2)', items: [ { p: 0, qty: 1 }, { p: 1, qty: 1 }, { p: 2, qty: 1 }, { p: 3, qty: 1 }, { p: 4, qty: 1 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ] }
     },
     repair: {
-      wire: { label: '배선 수리 기본', items: [ { p: 0, qty: 1 }, { p: 3, qty: 1 } ] },
-      adapLow: { label: '아답터(저용량) 교체', items: [ { p: 0, qty: 1 }, { p: 1, qty: 1 } ] },
-      adapHigh: { label: '아답터(고용량) 교체', items: [ { p: 0, qty: 1 }, { p: 2, qty: 1 } ] },
-      dvr4: { label: '녹화기 4채널 교체', items: [ { p: 0, qty: 1 }, { p: 9, qty: 1 } ] },
-      dvr8: { label: '녹화기 8채널 교체', items: [ { p: 0, qty: 1 }, { p: 10, qty: 1 } ] },
-      hdd2: { label: 'HDD 2TB 교체', items: [ { p: 0, qty: 1 }, { p: 12, qty: 1 } ] },
-      hdd4: { label: 'HDD 4TB 교체', items: [ { p: 0, qty: 1 }, { p: 13, qty: 1 } ] }
+      wire: { label: '출장+배선 수리', items: [ { p: 0, qty: 1 }, { p: 3, qty: 1 } ] },
+      adapLow: { label: '출장+아답터(저)', items: [ { p: 0, qty: 1 }, { p: 1, qty: 1 } ] },
+      adapHigh: { label: '출장+아답터(고)', items: [ { p: 0, qty: 1 }, { p: 2, qty: 1 } ] },
+      dvr4: { label: '출장+4ch 교체', items: [ { p: 0, qty: 1 }, { p: 9, qty: 1 } ] },
+      dvr8: { label: '출장+8ch 교체', items: [ { p: 0, qty: 1 }, { p: 10, qty: 1 } ] },
+      hdd2: { label: '출장+HDD 2TB', items: [ { p: 0, qty: 1 }, { p: 12, qty: 1 } ] },
+      hdd4: { label: '출장+HDD 4TB', items: [ { p: 0, qty: 1 }, { p: 13, qty: 1 } ] }
     }
   };
 
@@ -803,6 +811,9 @@
     html += '<button class="set-btn ghost" type="button" id="addRowBtn">+ 빈 행 추가</button>';
     var box = $('#setBtns');
     if (box) box.innerHTML = html;
+    // 아날로그·IP 혼합(하이브리드) 안내는 신규 설치에서만 보인다.
+    var mix = $('#mixNote');
+    if (mix) mix.style.display = mode === 'install' ? 'block' : 'none';
   }
 
   // 세트 하나를 견적에 적용 (출장료는 중복으로 넣지 않음)

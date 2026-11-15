@@ -110,6 +110,7 @@
     font-size:11px;color:#4a5b76;line-height:1.5;
   }
   .basis b{color:#22304c;font-weight:700}
+  .mode-seg{margin-bottom:11px}
   .sets{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
   .set-btn{
     cursor:pointer;font-size:12.5px;font-weight:650;
@@ -360,15 +361,13 @@
       <h2>빠른 품목 추가</h2>
       <span class="hint">탭하면 단가까지 자동 입력</span>
     </div>
-    <div class="chips" id="presetChips"></div>
-    <p class="basis">단가 기준 · <b>기본 설치비 · 아답터 · 부자재 · 기본 10m 배선 · 네트워크 세팅 포함</b> (VAT 별도). <b>기본 출장료 50,000원</b>은 처음부터·세트 선택 시 자동 포함되며, 10m 초과 배선은 1m당 별도입니다.</p>
-    <div class="sets">
-      <button class="set-btn" type="button" data-set="analog4"><b>아날로그 4대 세트</b><small></small></button>
-      <button class="set-btn" type="button" data-set="analog8"><b>아날로그 8대 세트</b><small></small></button>
-      <button class="set-btn" type="button" data-set="ip4"><b>IP 4대 세트</b><small></small></button>
-      <button class="set-btn" type="button" data-set="ip8"><b>IP 8대 세트</b><small></small></button>
-      <button class="set-btn ghost" type="button" id="addRowBtn">+ 빈 행 추가</button>
+    <div class="seg mode-seg" id="modeSeg" role="group" aria-label="작업 구분">
+      <button type="button" data-mode="install" class="on">신규 설치</button>
+      <button type="button" data-mode="repair">고장 수리</button>
     </div>
+    <div class="chips" id="presetChips"></div>
+    <p class="basis" id="basisNote"></p>
+    <div class="sets" id="setBtns"></div>
   </section>
 
   <!-- 품목 -->
@@ -481,41 +480,77 @@
 
   var STORE = 'cctv-quote-calculator.v1';
 
-  // 단가는 VAT 별도 기준. 기본 설치비 · 아답터 · 부자재 · 기본 10m 배선 · 네트워크 세팅 포함.
-  // 원가(cost)는 넣지 않는다. 품목 행의 매입원가 칸은 기본 0에서 직접 입력.
-  // 기본 출장료(50,000원)는 초기 상태와 모든 세트에 무조건 포함된다.
-  var PRESETS = [
-    { name: '기본 출장료', short: '기본 출장료', spec: '출장·방문 · 식', price: 50000, fee: true },
-    { name: '아날로그 2MP 야간컬러 실내 돔', short: '아날로그 실내 돔', spec: '2MP 야간컬러 · 대', price: 120000 },
-    { name: '아날로그 2MP 야간컬러 실외 불릿', short: '아날로그 실외 불릿', spec: '2MP 야간컬러 · 대', price: 150000 },
-    { name: 'IP 2MP 야간컬러(F1.0) 실내/기본', short: 'IP 실내/기본', spec: '2MP 야간컬러 F1.0 · 대', price: 180000 },
-    { name: 'IP 2MP 야간컬러(F1.0) 실외/고급', short: 'IP 실외/고급', spec: '2MP 야간컬러 F1.0 · 대', price: 250000 },
-    { name: '녹화기 4채널 (DVR/NVR)', short: '녹화기 4채널', spec: 'DVR/NVR · 대', price: 250000 },
-    { name: '녹화기 8채널 (DVR/NVR)', short: '녹화기 8채널', spec: 'DVR/NVR · 대', price: 450000 },
-    { name: '녹화기 16채널 (DVR/NVR)', short: '녹화기 16채널', spec: 'DVR/NVR · 대', price: 550000 },
-    { name: '보안용 HDD (2TB)', short: '보안용 HDD 2TB', spec: '2TB · 개', price: 350000 },
-    { name: '보안용 HDD (4TB)', short: '보안용 HDD 4TB', spec: '4TB · 개', price: 400000 },
-    { name: '기본 10m 초과 배선', short: '초과 배선', spec: '1m당 · m', price: 3000 },
-    { name: '특수 작업 (고소·매립 등)', short: '특수 작업', spec: '현장 추가 · 식', price: 0 }
-  ];
+  // 단가는 VAT 별도 기준. 원가(cost)는 넣지 않는다(행의 매입원가 칸은 기본 0).
+  // 기본 출장료(50,000원)는 신규 설치·고장 수리 모두, 초기 상태와 모든 세트에 무조건 포함된다.
+  var FEE = { name: '기본 출장료', short: '기본 출장료', spec: '출장·방문 · 식', price: 50000, fee: true };
 
-  var SETS = {
-    'analog4': [ { p: 0, qty: 1 }, { p: 1, qty: 2 }, { p: 2, qty: 2 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ],
-    'analog8': [ { p: 0, qty: 1 }, { p: 1, qty: 4 }, { p: 2, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ],
-    'ip4': [ { p: 0, qty: 1 }, { p: 3, qty: 2 }, { p: 4, qty: 2 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ],
-    'ip8': [ { p: 0, qty: 1 }, { p: 3, qty: 4 }, { p: 4, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ]
+  var PRESETS = {
+    install: [
+      FEE,
+      { name: '아날로그 2MP 야간컬러 실내 돔', short: '아날로그 실내 돔', spec: '2MP 야간컬러 · 대', price: 120000 },
+      { name: '아날로그 2MP 야간컬러 실외 불릿', short: '아날로그 실외 불릿', spec: '2MP 야간컬러 · 대', price: 150000 },
+      { name: 'IP 2MP 야간컬러(F1.0) 실내/기본', short: 'IP 실내/기본', spec: '2MP 야간컬러 F1.0 · 대', price: 180000 },
+      { name: 'IP 2MP 야간컬러(F1.0) 실외/고급', short: 'IP 실외/고급', spec: '2MP 야간컬러 F1.0 · 대', price: 250000 },
+      { name: '녹화기 4채널 (DVR/NVR)', short: '녹화기 4채널', spec: 'DVR/NVR · 대', price: 250000 },
+      { name: '녹화기 8채널 (DVR/NVR)', short: '녹화기 8채널', spec: 'DVR/NVR · 대', price: 450000 },
+      { name: '녹화기 16채널 (DVR/NVR)', short: '녹화기 16채널', spec: 'DVR/NVR · 대', price: 550000 },
+      { name: '보안용 HDD (2TB)', short: '보안용 HDD 2TB', spec: '2TB · 개', price: 350000 },
+      { name: '보안용 HDD (4TB)', short: '보안용 HDD 4TB', spec: '4TB · 개', price: 400000 },
+      { name: '기본 10m 초과 배선', short: '초과 배선', spec: '1m당 · m', price: 3000 },
+      { name: '특수 작업 (고소·매립 등)', short: '특수 작업', spec: '현장 추가 · 식', price: 0 }
+    ],
+    repair: [
+      FEE,
+      { name: '아답터 교체 (저용량)', short: '아답터 저용량', spec: '아답터 · 개', price: 20000 },
+      { name: '아답터 교체 (고용량)', short: '아답터 고용량', spec: '아답터 · 개', price: 50000 },
+      { name: '카메라·배선 수리 (기본 10m 이내)', short: '카메라·배선 수리', spec: '10m 이내 · 식', price: 70000 },
+      { name: '카메라 교체 (실내 2MP 적외선)', short: '실내 적외선 교체', spec: '2MP 적외선 · 대', price: 70000 },
+      { name: '카메라 교체 (실내 2MP 야간컬러)', short: '실내 야간컬러 교체', spec: '2MP 야간컬러 · 대', price: 90000 },
+      { name: '카메라 교체 (실외 2MP 불릿 적외선)', short: '실외 적외선 교체', spec: '2MP 불릿 적외선 · 대', price: 100000 },
+      { name: '카메라 교체 (실외 2MP 불릿 야간컬러)', short: '실외 야간컬러 교체', spec: '2MP 불릿 야간컬러 · 대', price: 120000 },
+      { name: '10m 초과 배선 연장', short: '초과 배선 연장', spec: '1m당 · m', price: 3000 },
+      { name: '녹화기 교체 (4채널)', short: '녹화기 4채널 교체', spec: 'DVR/NVR · 대', price: 250000 },
+      { name: '녹화기 교체 (8채널)', short: '녹화기 8채널 교체', spec: 'DVR/NVR · 대', price: 450000 },
+      { name: '녹화기 교체 (16채널)', short: '녹화기 16채널 교체', spec: 'DVR/NVR · 대', price: 550000 },
+      { name: '보안용 HDD 교체 (2TB)', short: 'HDD 2TB 교체', spec: '2TB · 개', price: 350000 },
+      { name: '보안용 HDD 교체 (4TB)', short: 'HDD 4TB 교체', spec: '4TB · 개', price: 400000 }
+    ]
   };
 
-  function feePreset() {
-    for (var i = 0; i < PRESETS.length; i++) if (PRESETS[i].fee) return PRESETS[i];
-    return null;
+  var SETS = {
+    install: {
+      analog4: { label: '아날로그 4대 세트', items: [ { p: 0, qty: 1 }, { p: 1, qty: 2 }, { p: 2, qty: 2 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ] },
+      analog8: { label: '아날로그 8대 세트', items: [ { p: 0, qty: 1 }, { p: 1, qty: 4 }, { p: 2, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ] },
+      ip4: { label: 'IP 4대 세트', items: [ { p: 0, qty: 1 }, { p: 3, qty: 2 }, { p: 4, qty: 2 }, { p: 5, qty: 1 }, { p: 8, qty: 1 } ] },
+      ip8: { label: 'IP 8대 세트', items: [ { p: 0, qty: 1 }, { p: 3, qty: 4 }, { p: 4, qty: 4 }, { p: 6, qty: 1 }, { p: 9, qty: 1 } ] }
+    },
+    repair: {
+      wire: { label: '배선 수리 기본', items: [ { p: 0, qty: 1 }, { p: 3, qty: 1 } ] },
+      adapLow: { label: '아답터(저용량) 교체', items: [ { p: 0, qty: 1 }, { p: 1, qty: 1 } ] },
+      adapHigh: { label: '아답터(고용량) 교체', items: [ { p: 0, qty: 1 }, { p: 2, qty: 1 } ] },
+      dvr4: { label: '녹화기 4채널 교체', items: [ { p: 0, qty: 1 }, { p: 9, qty: 1 } ] },
+      dvr8: { label: '녹화기 8채널 교체', items: [ { p: 0, qty: 1 }, { p: 10, qty: 1 } ] },
+      hdd2: { label: 'HDD 2TB 교체', items: [ { p: 0, qty: 1 }, { p: 12, qty: 1 } ] },
+      hdd4: { label: 'HDD 4TB 교체', items: [ { p: 0, qty: 1 }, { p: 13, qty: 1 } ] }
+    }
+  };
+
+  var BASIS = {
+    install: '단가 기준 · <b>기본 설치비 · 아답터 · 부자재 · 기본 10m 배선 · 네트워크 세팅 포함</b> (VAT 별도). <b>기본 출장료 50,000원</b>은 처음부터·세트 선택 시 자동 포함되며, 10m 초과 배선은 1m당 별도입니다.',
+    repair: '단가 기준 · <b>기본 출장료 50,000원 + 부품값 + 기본 공임</b> (VAT 별도). 카메라·배선 수리는 기본 10m 이내 포함, 초과분은 1m당 3,000원 별도입니다.'
+  };
+
+  function currentMode() {
+    return state && state.mode === 'repair' ? 'repair' : 'install';
   }
+  function modePresets() {
+    return PRESETS[currentMode()] || PRESETS.install;
+  }
+  function feePreset() { return FEE; }
 
   // 기본 출장료 행이 이미 있는지 (세트·칩에서 중복으로 넣지 않기 위해)
   function hasFeeRowIn(items) {
-    var fp = feePreset();
-    if (!fp) return false;
-    var key = fp.name.trim();
+    var key = FEE.name.trim();
     return (items || []).some(function (it) {
       return String((it && it.name) || '').trim() === key;
     });
@@ -600,6 +635,7 @@
       items: [newItem(feePreset())],
       vat: 'excl',
       rounding: 0,
+      mode: 'install',
       showCost: true
     };
   }
@@ -624,6 +660,7 @@
       items: Array.isArray(saved.items) ? saved.items : base.items,
       vat: saved.vat === 'incl' ? 'incl' : 'excl',
       rounding: [0, 1000, 10000].indexOf(saved.rounding) !== -1 ? saved.rounding : 0,
+      mode: saved.mode === 'repair' ? 'repair' : 'install',
       showCost: saved.showCost !== false
     };
     st.items = st.items.filter(function (it) { return it && typeof it === 'object'; }).map(function (it) {
@@ -692,10 +729,11 @@
     };
   }
 
-  /* ── 렌더: 프리셋 ─────────────────────── */
+  /* ── 렌더: 프리셋/세트 (모드별) ────────── */
   function renderPresets() {
     var box = $('#presetChips');
-    box.innerHTML = PRESETS.map(function (p, i) {
+    var list = modePresets();
+    box.innerHTML = list.map(function (p, i) {
       var priceTxt = p.price > 0 ? wonUnit(p.price) : '직접입력';
       var priceCls = p.price > 0 ? 'chip-price' : 'chip-price direct';
       return '<button class="chip" type="button" data-preset="' + i + '">' +
@@ -703,26 +741,60 @@
         '<small>' + esc(p.spec) + '</small>' +
         '<span class="' + priceCls + '">' + esc(priceTxt) + '</span></button>';
     }).join('');
+    document.querySelectorAll('#modeSeg button').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-mode') === currentMode());
+    });
   }
 
-  /* ── 렌더: 세트 버튼 금액 ─────────────── */
-  function setTotal(defs) {
+  function renderBasis() {
+    var el = $('#basisNote');
+    if (el) el.innerHTML = BASIS[currentMode()] || BASIS.install;
+  }
+
+  function setTotal(def, mode) {
+    var list = PRESETS[mode] || [];
     var sum = 0;
-    (defs || []).forEach(function (d) {
-      var p = PRESETS[d.p];
+    ((def && def.items) || []).forEach(function (d) {
+      var p = list[d.p];
       if (!p) return;
       sum += (d.qty || 0) * (p.price || 0);
     });
     return sum;
   }
 
-  function renderSetPrices() {
-    document.querySelectorAll('[data-set]').forEach(function (btn) {
-      var small = btn.querySelector('small');
-      if (!small) return;
-      var t = setTotal(SETS[btn.getAttribute('data-set')]);
-      small.textContent = t > 0 ? wonUnit(t) + ' (VAT 별도)' : '';
+  function renderSets() {
+    var mode = currentMode();
+    var defs = SETS[mode] || {};
+    var html = Object.keys(defs).map(function (key) {
+      var def = defs[key];
+      var t = setTotal(def, mode);
+      return '<button class="set-btn" type="button" data-set="' + esc(key) + '">' +
+        '<b>' + esc(def.label) + '</b>' +
+        '<small>' + (t > 0 ? wonUnit(t) + ' (VAT 별도)' : '') + '</small></button>';
+    }).join('');
+    html += '<button class="set-btn ghost" type="button" id="addRowBtn">+ 빈 행 추가</button>';
+    var box = $('#setBtns');
+    if (box) box.innerHTML = html;
+  }
+
+  // 세트 하나를 견적에 적용 (출장료는 중복으로 넣지 않음)
+  function applySet(key) {
+    var mode = currentMode();
+    var def = (SETS[mode] || {})[key];
+    if (!def || !def.items.length) return;
+    var list = PRESETS[mode] || [];
+    def.items.forEach(function (d) {
+      var preset = list[d.p];
+      if (!preset) return;
+      if (preset.fee && hasFeeRowIn(state.items)) return;
+      var it = newItem(preset);
+      it.qty = d.qty;
+      state.items.push(it);
     });
+    cleanupEmptyRows();
+    syncRows();
+    updateTotals();
+    toast(def.label + ' 추가 — 단가가 자동 입력됐어요');
   }
 
   /* ── 렌더: 품목 행 ────────────────────── */
@@ -1053,7 +1125,7 @@
     $('#presetChips').addEventListener('click', function (e) {
       var btn = e.target.closest('[data-preset]');
       if (!btn) return;
-      var preset = PRESETS[Number(btn.getAttribute('data-preset'))];
+      var preset = modePresets()[Number(btn.getAttribute('data-preset'))];
       if (!preset) return;
       if (preset.fee && hasFeeRowIn(state.items)) {
         toast('기본 출장료는 이미 포함되어 있어요');
@@ -1066,30 +1138,24 @@
       toast(preset.short + ' 추가');
     });
 
-    document.querySelectorAll('[data-set]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var defs = SETS[btn.getAttribute('data-set')] || [];
-        if (!defs.length) return;
-        var label = btn.querySelector('b') ? btn.querySelector('b').textContent.trim() : btn.textContent.trim();
-        var firstId = null;
-        defs.forEach(function (d) {
-          var preset = PRESETS[d.p];
-          if (!preset) return;
-          if (preset.fee && hasFeeRowIn(state.items)) return; // 출장료는 중복으로 넣지 않는다
-          var it = newItem(preset);
-          it.qty = d.qty;
-          state.items.push(it);
-          if (!firstId) firstId = it.id;
-        });
-        // 첫 빈 행이 남아 있으면 정리
-        cleanupEmptyRows();
-        syncRows();
-        updateTotals();
-        toast(label + ' 추가 — 단가가 자동 입력됐어요');
+    document.querySelectorAll('#modeSeg button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        state.mode = b.getAttribute('data-mode') === 'repair' ? 'repair' : 'install';
+        renderPresets();
+        renderSets();
+        renderBasis();
+        save();
       });
     });
 
-    $('#addRowBtn').addEventListener('click', addRow);
+    // 세트 버튼은 모드 전환 때마다 다시 그리므로 위임으로 받는다.
+    $('#setBtns').addEventListener('click', function (e) {
+      if (e.target.closest('#addRowBtn')) { addRow(); return; }
+      var btn = e.target.closest('[data-set]');
+      if (!btn) return;
+      applySet(btn.getAttribute('data-set'));
+    });
+
     $('#addRowBtn2').addEventListener('click', addRow);
 
     $('#copyBtn').addEventListener('click', function () { copyText(summaryText()); });
@@ -1106,6 +1172,9 @@
       if (!confirm('작성 중인 견적을 모두 지울까요? (이 브라우저의 임시저장도 초기화됩니다)')) return;
       state = freshState();
       try { localStorage.removeItem(STORE); } catch (e) {}
+      renderPresets();
+      renderSets();
+      renderBasis();
       syncRows();
       bindStaticValues();
       updateTotals();
@@ -1205,7 +1274,8 @@
   /* ── 시작 ─────────────────────────────── */
   load();
   renderPresets();
-  renderSetPrices();
+  renderSets();
+  renderBasis();
   bindStatic();
   syncRows();
   bindStaticValues();

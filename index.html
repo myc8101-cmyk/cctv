@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12308f">
 <title>CCTV·정보통신 견적 계산기</title>
-<meta name="description" content="CCTV와 정보통신 시공 견적을 현장에서 바로 계산하는 웹 도구. 설치·수리 전 예상 금액을 미리 계산해 보는 견적기로, 최종 금액은 현장 실사 후 확정됩니다. 품목 프리셋, 부가세 자동 계산, 내부 원가·마진 확인, 카톡 요약 복사, A4 인쇄/PDF, 자동 임시저장.">
+<meta name="description" content="CCTV와 정보통신 시공 견적을 현장에서 바로 계산하는 웹 도구. 설치·수리 전 예상 금액을 미리 계산해 보는 견적기로, 최종 금액은 현장 실사 후 확정됩니다. 품목 프리셋, 부가세 자동 계산, 평형별 추가 배선 자동 계산, 카톡 요약 복사, A4 인쇄/PDF, 자동 임시저장.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
@@ -187,12 +187,6 @@
     border:1px solid #e0e8fb;font-variant-numeric:tabular-nums;font-weight:680;color:#16233d;
     overflow:hidden;white-space:nowrap;
   }
-  .cost-line{display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
-  .cost-line > span{font-size:10.5px;color:var(--muted);font-weight:650;flex:0 0 auto}
-  .cost-line input{width:118px;flex:0 0 118px;text-align:right;font-variant-numeric:tabular-nums;padding:6px 9px;background:#fff8f2;border-color:#f0ddc9}
-  .row-profit{font-size:11px;color:var(--ok);font-weight:650;margin-left:auto;font-variant-numeric:tabular-nums}
-  .row-profit.neg{color:var(--danger)}
-  body.hide-cost .cost-line{display:none}
   .row-auto{background:#f6f9ff;border-color:#c9dbf7;border-style:dashed}
   .row-auto .row-name{background:#fff;color:#183265;font-weight:650}
   .auto-badge{
@@ -215,19 +209,6 @@
   }
   .add-row:active{background:#f4f8ff}
 
-  .switch{display:inline-flex;align-items:center;gap:7px;cursor:pointer;margin-left:auto;font-size:11.5px;font-weight:650;color:var(--ink-soft)}
-  .switch input{position:absolute;opacity:0;width:1px;height:1px}
-  .switch i{
-    width:36px;height:21px;border-radius:999px;background:#cdd7e6;position:relative;transition:background .18s;flex:0 0 36px;
-  }
-  .switch i::after{
-    content:"";position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;
-    background:#fff;transition:transform .18s;box-shadow:0 1px 2px rgba(0,0,0,.2);
-  }
-  .switch input:checked + i{background:var(--brand)}
-  .switch input:checked + i::after{transform:translateX(15px)}
-  .switch input:focus-visible + i{outline:2px solid rgba(30,78,216,.35);outline-offset:2px}
-
   /* ── 합계 ───────────────────────────── */
   .seg{display:grid;grid-auto-flow:column;gap:4px;background:#eff3fa;border-radius:11px;padding:4px;margin-bottom:10px}
   .seg button{
@@ -248,23 +229,6 @@
   }
   .korean-amt b{font-weight:700;color:#16233d}
   .memo-wrap{margin-top:11px}
-
-  /* ── 내부 마진 ───────────────────────── */
-  .margin-card{background:linear-gradient(180deg,#101c36 0%,#17253f 100%);border-color:#0b1424;color:#e6edf9}
-  .margin-card .card-head h2{color:#fff}
-  .margin-card .sums dt{color:#a6b6d3}
-  .margin-card .sums dd{color:#fff}
-  .margin-card .sums .grand{border-color:rgba(255,255,255,.16)}
-  .margin-card .sums .grand dt{color:#dfe8f8}
-  .margin-card .sums .grand dd{color:#7ef0c0}
-  .margin-card .hint{color:#93a4c4;margin-left:0;display:block;margin-top:11px;line-height:1.5}
-  .badge{
-    font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;
-    background:rgba(255,255,255,.12);color:#c8d6f0;border:1px solid rgba(255,255,255,.12);
-  }
-  .bar{height:7px;border-radius:999px;background:rgba(255,255,255,.14);overflow:hidden;margin:13px 0 4px}
-  .bar i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#34d399,#7ef0c0);transition:width .25s ease}
-  .bar.neg i{background:linear-gradient(90deg,#f87171,#fca5a5)}
 
   /* ── 하단 바 ─────────────────────────── */
   .bottombar{
@@ -433,10 +397,6 @@
     <div class="card-head">
       <h2>품목 <span class="count" id="itemCount">0</span></h2>
       <span class="mode-label" id="modeLabel" data-mode="install">신규 설치</span>
-      <label class="switch" title="원가·마진 칸을 화면에서 숨깁니다">
-        <input type="checkbox" id="costToggle" checked>
-        <i></i><span>원가 표시</span>
-      </label>
     </div>
     <div class="rows" id="rows"></div>
     <div class="empty" id="emptyState">아직 품목이 없습니다. 위의 품목 버튼으로 시작하세요.</div>
@@ -475,29 +435,12 @@
     </label>
   </section>
 
-  <!-- 내부 마진 -->
-  <section class="card margin-card no-print" id="marginCard">
-    <div class="card-head">
-      <h2>내부 마진</h2>
-      <span class="badge">인쇄 · 복사 제외</span>
-    </div>
-    <div class="bar" id="marginBar"><i id="marginBarFill"></i></div>
-    <dl class="sums">
-      <div><dt>매입 원가 합계</dt><dd id="sumCost">0원</dd></div>
-      <div><dt>매출 (공급가액)</dt><dd id="sumRevenue">0원</dd></div>
-      <div><dt>마진</dt><dd id="sumProfit">0원</dd></div>
-      <div class="grand"><dt>마진율</dt><dd id="sumRate">0%</dd></div>
-    </dl>
-    <span class="hint">품목 행의 <b>매입원가</b> 칸에 원가를 넣으면 바로 계산됩니다. 이 카드와 원가 칸은 인쇄·카톡 복사에 절대 포함되지 않습니다.</span>
-  </section>
-
   <!-- 사용 안내 -->
   <section class="card no-print">
     <div class="card-head"><h2>사용 안내</h2></div>
     <ul class="guide">
       <li>이 계산기는 <b>설치·수리 전에 대략 얼마인지 미리 보는 예상 견적기</b>입니다. <b>최종 금액은 현장 실사 후 확정</b>됩니다.</li>
       <li>입력한 내용은 이 브라우저에 <b>자동 임시저장</b>됩니다. 창을 닫아도 다음에 이어서 쓸 수 있어요.</li>
-      <li><b>원가·마진</b>은 인쇄와 카톡 요약에 들어가지 않습니다. 고객에게 화면을 보여줄 때는 <b>원가 표시</b> 스위치를 끄세요.</li>
       <li><b>절사</b>는 공급가액(부가세 포함 시 총액)에 적용되고, 부가세는 절사된 금액 기준으로 다시 계산됩니다.</li>
       <li><b>인쇄 / PDF</b>는 A4 한 장으로 나옵니다. 휴대폰에서는 인쇄 화면에서 'PDF로 저장'을 고르세요.</li>
     </ul>
@@ -540,7 +483,7 @@
 
   var STORE = 'cctv-quote-calculator.v1';
 
-  // 단가는 VAT 별도 기준. 원가(cost)는 넣지 않는다(행의 매입원가 칸은 기본 0).
+  // 단가는 VAT 별도 기준.
   // 기본 출장료(50,000원)는 신규 설치·고장 수리 모두, 초기 상태와 모든 세트에 무조건 포함된다.
   var FEE = { name: '기본 출장료', short: '기본 출장료', spec: '출장·방문 · 식', price: 50000, fee: true };
 
@@ -661,7 +604,7 @@
     var meters = Math.round(cams * def.per);
     var name = autoWireName(def);
     if (!existing.length) {
-      q.items.push({ id: uid(), name: name, qty: meters, price: WIRE_PRICE, cost: 0, auto: 'band' });
+      q.items.push({ id: uid(), name: name, qty: meters, price: WIRE_PRICE, auto: 'band' });
       return true;
     }
     var row = existing[0];
@@ -806,7 +749,6 @@
       name: preset ? preset.name : '',
       qty: 1,
       price: preset && preset.price ? Math.round(preset.price) : 0,
-      cost: 0,
       cam: !!(preset && preset.cam)
     };
   }
@@ -822,7 +764,6 @@
     return {
       meta: { site: '', date: iso, no: autoNo(iso), issuer: '', memo: '' },
       mode: 'install',
-      showCost: true,
       quotes: { install: newQuote(), repair: newQuote() }
     };
   }
@@ -845,7 +786,6 @@
     var st = {
       meta: Object.assign({}, base.meta, saved.meta || {}),
       mode: saved.mode === 'repair' ? 'repair' : 'install',
-      showCost: saved.showCost !== false,
       quotes: { install: newQuote(), repair: newQuote() }
     };
     // 이전 버전(최상위 items) 형식이면 신규 설치 견적으로 옮긴다.
@@ -877,7 +817,6 @@
         name: typeof it.name === 'string' ? it.name : '',
         qty: typeof it.qty === 'number' ? it.qty : parseQty(it.qty),
         price: Math.round(Number(it.price) || 0),
-        cost: Math.round(Number(it.cost) || 0),
         cam: it.cam === true,
         auto: it.auto === 'band' ? 'band' : undefined
       };
@@ -896,13 +835,11 @@
 
   /* ── 계산 ─────────────────────────────── */
   function compute() {
-    var rows = [], rawSum = 0, costSum = 0;
+    var rows = [], rawSum = 0;
     Q().items.forEach(function (it) {
       var amt = Math.round((it.qty || 0) * (it.price || 0));
-      var cost = Math.round((it.qty || 0) * (it.cost || 0));
       rawSum += amt;
-      costSum += cost;
-      rows.push({ id: it.id, name: it.name, qty: it.qty, price: it.price, amt: amt, cost: cost });
+      rows.push({ id: it.id, name: it.name, qty: it.qty, price: it.price, amt: amt });
     });
 
     var supply, vat, total;
@@ -916,20 +853,12 @@
       total = supply + vat;
     }
 
-    var revenue = supply;
-    var profit = revenue - costSum;
-    var rate = revenue > 0 ? (profit / revenue) * 100 : 0;
-
     return {
       rows: rows,
       rawSum: rawSum,
       supply: supply,
       vat: vat,
       total: total,
-      costSum: costSum,
-      revenue: revenue,
-      profit: profit,
-      rate: rate,
       hasContent: rows.some(function (r) { return (r.name && r.name.trim()) || r.price > 0; })
     };
   }
@@ -1033,11 +962,6 @@
             '<div class="amt" data-amt="1">0원</div>' +
           '</div>' +
         '</div>' +
-        '<div class="cost-line">' +
-          '<span>매입원가</span>' +
-          '<input class="row-cost" type="text" inputmode="numeric" value="' + (it.cost ? won(it.cost) : '') + '" placeholder="0" aria-label="매입원가">' +
-          '<span class="row-profit" data-profit="1"></span>' +
-        '</div>' +
       '</div>';
   }
 
@@ -1064,11 +988,6 @@
             '<div class="amt" data-amt="1">0원</div>' +
           '</div>' +
         '</div>' +
-        '<div class="cost-line">' +
-          '<span>매입원가</span>' +
-          '<input class="row-cost" type="text" inputmode="numeric" value="' + (it.cost ? won(it.cost) : '') + '" placeholder="0" aria-label="매입원가">' +
-          '<span class="row-profit" data-profit="1"></span>' +
-        '</div>' +
       '</div>';
   }
 
@@ -1082,7 +1001,7 @@
     }
   }
 
-  /* ── 렌더: 합계/마진 ──────────────────── */
+  /* ── 렌더: 합계 ──────────────────────── */
   function updateTotals() {
     // 평형 자동 배선을 카메라 수량에 맞춰 먼저 맞춘다(행이 생기거나 사라지면 화면 다시 그리기).
     if (refreshBandWire()) syncRows();
@@ -1094,18 +1013,6 @@
       var amt = Math.round((it.qty || 0) * (it.price || 0));
       var amtEl = rowEl.querySelector('[data-amt]');
       if (amtEl) amtEl.textContent = wonUnit(amt);
-      var pEl = rowEl.querySelector('[data-profit]');
-      if (pEl) {
-        if (amt > 0 && it.cost > 0) {
-          var p = amt - Math.round((it.qty || 0) * it.cost);
-          var r = amt > 0 ? (p / amt) * 100 : 0;
-          pEl.textContent = '이익 ' + wonUnit(p) + ' · ' + r.toFixed(1) + '%';
-          pEl.classList.toggle('neg', p < 0);
-        } else {
-          pEl.textContent = '';
-          pEl.classList.remove('neg');
-        }
-      }
     });
 
     $('#sumRaw').textContent = wonUnit(c.rawSum);
@@ -1115,16 +1022,6 @@
     $('#vatLabel').textContent = Q().vat === 'incl' ? '부가세 (포함 10%)' : '부가세 (10%)';
     $('#koreanAmt').textContent = koreanAmount(c.total);
     $('#bbTotal').textContent = wonUnit(c.total);
-
-    $('#sumCost').textContent = wonUnit(c.costSum);
-    $('#sumRevenue').textContent = wonUnit(c.revenue);
-    $('#sumProfit').textContent = wonUnit(c.profit);
-    $('#sumRate').textContent = (c.revenue > 0 ? c.rate.toFixed(1) : '0.0') + '%';
-
-    var fill = $('#marginBarFill');
-    var w = Math.max(0, Math.min(100, c.rate));
-    fill.style.width = w + '%';
-    $('#marginBar').classList.toggle('neg', c.profit < 0);
 
     $('#emptyState').style.display = Q().items.length ? 'none' : 'block';
 
@@ -1309,8 +1206,6 @@
     $('#quoteNo').value = state.meta.no || '';
     $('#issuer').value = state.meta.issuer || '';
     $('#memo').value = state.meta.memo || '';
-    $('#costToggle').checked = state.showCost !== false;
-    document.body.classList.toggle('hide-cost', state.showCost === false);
 
     document.querySelectorAll('#vatSeg button').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-vat') === Q().vat);
@@ -1343,12 +1238,6 @@
     });
     $('#quoteDate').addEventListener('input', function (e) {
       state.meta.date = e.target.value; renderPrint(compute()); save();
-    });
-
-    $('#costToggle').addEventListener('change', function (e) {
-      state.showCost = e.target.checked;
-      document.body.classList.toggle('hide-cost', !state.showCost);
-      save();
     });
 
     document.querySelectorAll('#vatSeg button').forEach(function (b) {
@@ -1472,9 +1361,6 @@
       } else if (t.classList.contains('row-price')) {
         it.price = formatMoneyInput(t);
         updateTotals();
-      } else if (t.classList.contains('row-cost')) {
-        it.cost = formatMoneyInput(t);
-        updateTotals();
       } else if (t.classList.contains('row-qty')) {
         it.qty = parseQty(t.value);
         updateTotals();
@@ -1525,8 +1411,6 @@
     $('#quoteNo').value = state.meta.no || '';
     $('#issuer').value = state.meta.issuer || '';
     $('#memo').value = state.meta.memo || '';
-    $('#costToggle').checked = state.showCost !== false;
-    document.body.classList.toggle('hide-cost', state.showCost === false);
     document.querySelectorAll('#vatSeg button').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-vat') === Q().vat);
     });
@@ -1543,7 +1427,7 @@
   function cleanupEmptyRows() {
     var keep = null;
     Q().items = Q().items.filter(function (it) {
-      var empty = !it.name.trim() && !it.price && !it.cost;
+      var empty = !it.name.trim() && !it.price;
       if (empty) return false;
       return true;
     });

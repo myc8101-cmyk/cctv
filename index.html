@@ -188,6 +188,7 @@
   .rep-group + .rep-group{margin-top:13px}
   .rep-group h3{font-size:12.5px;font-weight:760;color:#33425c;margin-bottom:7px;letter-spacing:-.01em}
   .rep-cards{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .rep-cards.single{grid-template-columns:1fr}
   .rep-card{
     display:flex;flex-direction:column;gap:2px;text-align:left;font-family:inherit;
     background:#fff;border:1.5px solid var(--line-strong);border-radius:12px;
@@ -1116,7 +1117,7 @@
           '<span class="rep-spec">' + esc(it.spec) + '</span>' +
           '<span class="rep-price">' + wonUnit(p.price) + '</span></button>';
       }).join('');
-      return '<div class="rep-group"><h3>' + g.title + '</h3><div class="rep-cards">' + cards + '</div></div>';
+      return '<div class="rep-group"><h3>' + g.title + '</h3><div class="rep-cards' + (g.items.length === 1 ? ' single' : '') + '">' + cards + '</div></div>';
     }).join('');
   }
 

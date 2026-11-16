@@ -4,12 +4,30 @@
 <meta charset="utf-8">
 <title>390px 미리보기 (임시)</title>
 <style>
-  html,body{margin:0;background:#2b3242;display:grid;place-items:center;min-height:100vh}
-  .frame{background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.45)}
-  iframe{display:block;width:390px;height:2100px;border:0;background:#fff}
+  html,body{margin:0;background:#2b3242}
+  #wrap{padding:0}
+  iframe{display:block;width:390px;margin:0 auto;border:0;background:#fff;height:900px}
 </style>
 </head>
 <body>
-  <div class="frame"><iframe src="./index.html" title="CCTV 계산기 390x2100 미리보기"></iframe></div>
+  <div id="wrap"><iframe id="f" src="./index.html" title="CCTV 계산기 390px 미리보기"></iframe></div>
+<script>
+  // 미리보기 전용: iframe 높이를 내용 높이에 맞춰 내부 스크롤이 생기지 않게 한다(가로 390px 그대로).
+  (function () {
+    var f = document.getElementById('f');
+    function fit() {
+      try {
+        var d = f.contentDocument;
+        if (!d || !d.documentElement) return;
+        for (var i = 0; i < 3; i++) {
+          var h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
+          if (Math.abs(h - f.getBoundingClientRect().height) < 2) break;
+          f.style.height = h + 'px';
+        }
+      } catch (e) {}
+    }
+    f.addEventListener('load', function () { fit(); setTimeout(fit, 300); setTimeout(fit, 800); });
+  })();
+</script>
 </body>
 </html>

@@ -1599,7 +1599,8 @@
     $('#copyModal').addEventListener('click', function (e) { if (e.target === $('#copyModal')) closeModal(); });
 
     $('#resetBtn').addEventListener('click', function () {
-      if (!confirm('담은 품목과 입력한 정보를 모두 지울까요? (이 브라우저의 임시저장도 초기화됩니다)')) return;
+      // 확인창을 쓰지 않는다 — 인앱 브라우저·일부 모바일 웹뷰에서 window.confirm이 차단되면
+      // 초기화가 아예 실행되지 않고 이전 선택이 그대로 남는다. 누르면 곧바로 처음 상태로 돌린다.
       state = freshState();
       try { localStorage.removeItem(STORE); } catch (e) {}
       refreshModeUI();

@@ -134,6 +134,32 @@
   }
   .mix-note b{color:#1e4ed8;font-weight:750}
 
+  /* ── 평형별 추가 배선 ─────────────────── */
+  .bands{margin-top:12px;padding:11px;border-radius:12px;background:#f6f9ff;border:1px solid #dbe5f8}
+  .bands-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .bands-head b{font-size:12.5px;font-weight:750;color:#17253f;letter-spacing:-.01em}
+  .bands-head small{font-size:10.5px;color:var(--muted);font-weight:650}
+  .band-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .band-btn{
+    cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;
+    background:#fff;border:1px solid var(--line-strong);color:#2b3a54;
+    padding:7px 10px;border-radius:11px;line-height:1.25;min-width:0;
+    transition:transform .06s ease,background .15s;
+  }
+  .band-btn b{font-size:12.5px;font-weight:700;letter-spacing:-.01em}
+  .band-btn small{font-size:10px;color:var(--muted);font-weight:650;font-variant-numeric:tabular-nums}
+  .band-btn:active{transform:scale(.97)}
+  .band-btn.on{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 6px 14px -10px rgba(30,78,216,.9)}
+  .band-btn.on small{color:#d5e0ff}
+  .band-btn.ghost{border-style:dashed;color:#5a6b85;background:#fbfcff;font-size:12px;font-weight:700;justify-content:center}
+  .band-note{display:none;margin-top:8px;font-size:11.5px;line-height:1.55;color:#2b3f66;font-weight:600}
+  .band-note b{color:#1e4ed8;font-weight:750}
+  .band-floor{
+    margin-top:9px;padding-top:8px;border-top:1px dashed #d3dff5;
+    font-size:11px;line-height:1.5;color:#8a6a1f;font-weight:600;
+  }
+  .band-floor b{color:#7a5a10;font-weight:750}
+
   /* ── 품목 행 ─────────────────────────── */
   .rows{display:grid;gap:10px}
   .row{border:1px solid var(--line);border-radius:13px;padding:10px;background:#fcfdff}
@@ -167,6 +193,17 @@
   .row-profit{font-size:11px;color:var(--ok);font-weight:650;margin-left:auto;font-variant-numeric:tabular-nums}
   .row-profit.neg{color:var(--danger)}
   body.hide-cost .cost-line{display:none}
+  .row-auto{background:#f6f9ff;border-color:#c9dbf7;border-style:dashed}
+  .row-auto .row-name{background:#fff;color:#183265;font-weight:650}
+  .auto-badge{
+    flex:0 0 auto;font-size:10px;font-weight:750;color:#1e4ed8;background:#e7eeff;
+    border:1px solid #c9d8fb;padding:3px 7px;border-radius:999px;line-height:1;
+  }
+  .cell-static{
+    display:flex;align-items:center;justify-content:center;height:40px;padding:0 8px;
+    border:1px solid #dbe5f8;border-radius:10px;background:#eef4ff;
+    font-variant-numeric:tabular-nums;font-weight:750;color:#1e4ed8;white-space:nowrap;overflow:hidden;
+  }
   .empty{
     text-align:center;color:var(--muted);font-size:12.5px;
     padding:18px 10px;border:1px dashed var(--line-strong);border-radius:12px;background:#fafbfe;
@@ -380,6 +417,15 @@
     <p class="basis" id="basisNote"></p>
     <div class="sets" id="setBtns"></div>
     <p class="mix-note" id="mixNote"><b>아날로그·IP 혼합 구성(하이브리드)도 가능합니다</b> — 원하는 카메라를 섞어 담아 보세요. 아래 <b>혼합 4대</b> 세트로 시작할 수도 있습니다.</p>
+    <div class="bands" id="bandBox">
+      <div class="bands-head">
+        <b>현장 평형 선택 (추가 배선 자동 계산)</b>
+        <small>기본 10m 포함 · 초과 1m당 3,000원</small>
+      </div>
+      <div class="band-chips" id="bandChips"></div>
+      <p class="band-note" id="bandNote"></p>
+      <p class="band-floor">※ 층간 이동(지하·2층 이상) 배선 및 타공은 현장 실사 후 <b>별도 견적</b></p>
+    </div>
   </section>
 
   <!-- 품목 -->
@@ -500,17 +546,18 @@
   var PRESETS = {
     install: [
       FEE,
-      { name: '아날로그 2MP 야간컬러 실내 돔', short: '아날로그 실내 돔', spec: '2MP 야간컬러 · 대', price: 120000 },
-      { name: '아날로그 2MP 야간컬러 실외 불릿', short: '아날로그 실외 불릿', spec: '2MP 야간컬러 · 대', price: 150000 },
-      { name: 'IP 2MP 야간컬러(F1.0) 실내/기본', short: 'IP 실내/기본', spec: '2MP 야간컬러 F1.0 · 대', price: 180000 },
-      { name: 'IP 2MP 야간컬러(F1.0) 실외/고급', short: 'IP 실외/고급', spec: '2MP 야간컬러 F1.0 · 대', price: 250000 },
+      { name: '아날로그 2MP 야간컬러 실내 돔', short: '아날로그 실내 돔', spec: '2MP 야간컬러 · 대', price: 120000, cam: true },
+      { name: '아날로그 2MP 야간컬러 실외 불릿', short: '아날로그 실외 불릿', spec: '2MP 야간컬러 · 대', price: 150000, cam: true },
+      { name: 'IP 2MP 야간컬러(F1.0) 실내/기본', short: 'IP 실내/기본', spec: '2MP 야간컬러 F1.0 · 대', price: 180000, cam: true },
+      { name: 'IP 2MP 야간컬러(F1.0) 실외/고급', short: 'IP 실외/고급', spec: '2MP 야간컬러 F1.0 · 대', price: 250000, cam: true },
       { name: '녹화기 4채널 (DVR/NVR)', short: '녹화기 4채널', spec: 'DVR/NVR · 대', price: 250000 },
       { name: '녹화기 8채널 (DVR/NVR)', short: '녹화기 8채널', spec: 'DVR/NVR · 대', price: 450000 },
       { name: '녹화기 16채널 (DVR/NVR)', short: '녹화기 16채널', spec: 'DVR/NVR · 대', price: 550000 },
       { name: '보안용 HDD (2TB)', short: '보안용 HDD 2TB', spec: '2TB · 개', price: 350000 },
       { name: '보안용 HDD (4TB)', short: '보안용 HDD 4TB', spec: '4TB · 개', price: 400000 },
       { name: '기본 10m 초과 배선', short: '초과 배선', spec: '1m당 · m', price: 3000 },
-      { name: '특수 작업 (고소·매립 등)', short: '특수 작업', spec: '현장 추가 · 식', price: 0 }
+      { name: '특수 작업 (고소·매립 등)', short: '특수 작업', spec: '현장 추가 · 식', price: 0 },
+      { name: '층간 공사 (다층·별도견적)', short: '층간 공사', spec: '천공·수직배선 · 식', price: 0 }
     ],
     repair: [
       FEE,
@@ -549,6 +596,16 @@
     }
   };
 
+  // 현장 평형 5단계 — 기본 10m 포함 후 초과분을 대당 m로 더한다.
+  var BANDS = [
+    { key: 'b30', label: '30평 이하', max: 20, per: 10 },
+    { key: 'b40', label: '31~40평', max: 30, per: 20 },
+    { key: 'b50', label: '41~50평', max: 40, per: 30 },
+    { key: 'b80', label: '51~80평', max: 50, per: 40 },
+    { key: 'b81', label: '81평 이상', max: 60, per: 50 }
+  ];
+  var WIRE_PRICE = 3000;   // 10m 초과 배선 1m당
+
   var BASIS = {
     install: '단가 기준 · <b>기본 설치비 · 아답터 · 부자재 · 기본 10m 배선 · 네트워크 세팅 포함</b> (VAT 별도). <b>기본 출장료 50,000원</b>은 처음부터·세트 선택 시 자동 포함되며, 10m 초과 배선은 1m당 별도입니다.',
     repair: '단가 기준 · <b>기본 출장료 50,000원 + 부품값 + 기본 공임</b> (VAT 별도). 카메라·배선 수리는 기본 10m 이내 포함, 초과분은 1m당 3,000원 별도입니다.'
@@ -565,6 +622,112 @@
     return PRESETS[currentMode()] || PRESETS.install;
   }
   function feePreset() { return FEE; }
+
+  /* ── 평형별 추가 배선 (신규 설치 전용) ──── */
+  function bandDef(key) {
+    for (var i = 0; i < BANDS.length; i++) if (BANDS[i].key === key) return BANDS[i];
+    return null;
+  }
+  // 카메라 품목: 프리셋(아날로그/IP 카메라)으로 담았거나 품명에 '카메라'가 들어간 행
+  // (이전 버전에 저장된 행은 cam 표시가 없으므로 프리셋 품명으로도 알아본다)
+  var CAM_NAME = /카메라|^아날로그 2MP|^IP 2MP/;
+  function isCameraItem(it) {
+    if (!it || it.auto === 'band') return false;
+    if (it.cam === true) return true;
+    return CAM_NAME.test(String(it.name || ''));
+  }
+  function cameraCount() {
+    var n = 0;
+    Q().items.forEach(function (it) { if (isCameraItem(it)) n += Number(it.qty) || 0; });
+    return Math.round(n * 100) / 100;
+  }
+  function autoWireName(def) {
+    return '10m 초과 배선 (평형: ' + def.label + ' · 대당 +' + def.per + 'm)';
+  }
+
+  // 선택된 평형에 맞춰 자동 배선 행을 만들거나 수량·품명을 맞춘다.
+  // 행이 새로 생기거나 사라지면 true(화면 다시 그리기 필요).
+  function refreshBandWire() {
+    var q = Q();
+    var def = bandDef(q.band);
+    var existing = q.items.filter(function (it) { return it.auto === 'band'; });
+    var cams = cameraCount();
+    if (!def || cams <= 0) {
+      if (!existing.length) return false;
+      q.items = q.items.filter(function (it) { return it.auto !== 'band'; });
+      return true;
+    }
+    var meters = Math.round(cams * def.per);
+    var name = autoWireName(def);
+    if (!existing.length) {
+      q.items.push({ id: uid(), name: name, qty: meters, price: WIRE_PRICE, cost: 0, auto: 'band' });
+      return true;
+    }
+    var row = existing[0];
+    row.name = name;
+    row.qty = meters;
+    row.price = WIRE_PRICE;
+    if (existing.length > 1) {
+      q.items = q.items.filter(function (it) { return it.auto !== 'band' || it === row; });
+      return true;
+    }
+    return false;
+  }
+
+  function bandRow() {
+    for (var i = 0; i < Q().items.length; i++) if (Q().items[i].auto === 'band') return Q().items[i];
+    return null;
+  }
+
+  // 화면을 다시 그리지 않고 자동 행의 표시값만 맞춘다.
+  function refreshBandDom() {
+    var row = bandRow();
+    if (!row) return;
+    var rowEl = document.querySelector('.row[data-id="' + row.id + '"]');
+    if (!rowEl) return;
+    var nEl = rowEl.querySelector('.row-name');
+    if (nEl && nEl.value !== row.name) nEl.value = row.name;
+    var qEl = rowEl.querySelector('[data-qty-static]');
+    if (qEl) qEl.textContent = qtyText(row.qty) + ' m';
+    var pEl = rowEl.querySelector('[data-price-static]');
+    if (pEl) pEl.textContent = wonUnit(row.price);
+  }
+
+  function renderBands() {
+    var box = $('#bandBox');
+    if (!box) return;
+    var install = currentMode() === 'install';
+    box.style.display = install ? 'block' : 'none';
+    if (!install) return;
+    var cur = Q().band;
+    var html = BANDS.map(function (b) {
+      var on = cur === b.key;
+      return '<button class="band-btn' + (on ? ' on' : '') + '" type="button" data-band="' + b.key + '" aria-pressed="' + on + '">' +
+        '<b>' + esc(b.label) + '</b>' +
+        '<small>최대 ' + b.max + 'm · +' + b.per + 'm</small></button>';
+    }).join('');
+    html += '<button class="band-btn ghost' + (cur ? '' : ' on') + '" type="button" data-band="" aria-pressed="' + (!cur) + '">해제 / 직접입력</button>';
+    $('#bandChips').innerHTML = html;
+    updateBandNote();
+  }
+
+  function updateBandNote() {
+    var el = $('#bandNote');
+    if (!el) return;
+    var def = bandDef(Q().band);
+    if (!def) {
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+    var cams = cameraCount();
+    var meters = Math.round(cams * def.per);
+    el.style.display = 'block';
+    el.innerHTML = '카메라 <b>' + esc(qtyText(cams)) + '대</b> × 대당 <b>+' + def.per + 'm</b> = <b>' + won(meters) + 'm</b> 추가 배선 · ' +
+      wonUnit(WIRE_PRICE) + '/m → <b>' + wonUnit(meters * WIRE_PRICE) + '</b>' +
+      (cams <= 0 ? '<br>카메라 품목을 담으면 여기에 자동으로 계산됩니다.' : '') +
+      (def.key === 'b81' ? '<br>81평 이상은 복도·다구역 구조가 많아 <b>현장 실측</b>을 권장합니다.' : '');
+  }
 
   // 기본 출장료 행이 이미 있는지 (세트·칩에서 중복으로 넣지 않기 위해)
   function hasFeeRowIn(items) {
@@ -642,13 +805,15 @@
       name: preset ? preset.name : '',
       qty: 1,
       price: preset && preset.price ? Math.round(preset.price) : 0,
-      cost: 0
+      cost: 0,
+      cam: !!(preset && preset.cam)
     };
   }
 
   // 한 견적(모드별)의 기본값 — 신규 설치·고장 수리는 서로 섞이지 않게 따로 담는다.
+  // band는 신규 설치의 평형 선택(추가 배선 자동 계산) 전용.
   function newQuote() {
-    return { items: [newItem(feePreset())], vat: 'excl', rounding: 0 };
+    return { items: [newItem(feePreset())], vat: 'excl', rounding: 0, band: '' };
   }
 
   function freshState() {
@@ -693,6 +858,7 @@
       if (items.length) st.quotes[mk].items = items;
       st.quotes[mk].vat = q.vat === 'incl' ? 'incl' : 'excl';
       st.quotes[mk].rounding = [0, 1000, 10000].indexOf(Number(q.rounding)) !== -1 ? Number(q.rounding) : 0;
+      st.quotes[mk].band = (mk === 'install' && bandDef(q.band)) ? q.band : '';
     });
     // 두 견적 모두 기본 출장료를 무조건 채운다.
     ['install', 'repair'].forEach(function (mk) {
@@ -710,7 +876,9 @@
         name: typeof it.name === 'string' ? it.name : '',
         qty: typeof it.qty === 'number' ? it.qty : parseQty(it.qty),
         price: Math.round(Number(it.price) || 0),
-        cost: Math.round(Number(it.cost) || 0)
+        cost: Math.round(Number(it.cost) || 0),
+        cam: it.cam === true,
+        auto: it.auto === 'band' ? 'band' : undefined
       };
     });
   }
@@ -814,6 +982,7 @@
     // 아날로그·IP 혼합(하이브리드) 안내는 신규 설치에서만 보인다.
     var mix = $('#mixNote');
     if (mix) mix.style.display = mode === 'install' ? 'block' : 'none';
+    renderBands();
   }
 
   // 세트 하나를 견적에 적용 (출장료는 중복으로 넣지 않음)
@@ -838,6 +1007,7 @@
 
   /* ── 렌더: 품목 행 ────────────────────── */
   function rowHtml(it) {
+    if (it.auto === 'band') return autoRowHtml(it);
     return '' +
       '<div class="row" data-id="' + esc(it.id) + '">' +
         '<div class="row-top">' +
@@ -870,6 +1040,37 @@
       '</div>';
   }
 
+  // 평형 자동 계산 행 — 품명·수량·단가는 계산값이라 고정 표시(수정은 평형 버튼·카메라 수량으로)
+  function autoRowHtml(it) {
+    return '' +
+      '<div class="row row-auto" data-id="' + esc(it.id) + '">' +
+        '<div class="row-top">' +
+          '<input class="row-name" type="text" value="' + esc(it.name) + '" readonly aria-label="품명 (평형 자동 계산)">' +
+          '<span class="auto-badge">자동</span>' +
+          '<button class="del" type="button" data-del="1" aria-label="자동 배선 삭제 (평형 해제)">✕</button>' +
+        '</div>' +
+        '<div class="row-grid">' +
+          '<div class="cell">' +
+            '<span>총 연장</span>' +
+            '<div class="cell-static" data-qty-static="1">' + esc(qtyText(it.qty)) + ' m</div>' +
+          '</div>' +
+          '<div class="cell">' +
+            '<span>판매단가</span>' +
+            '<div class="cell-static" data-price-static="1">' + wonUnit(it.price) + '</div>' +
+          '</div>' +
+          '<div class="cell">' +
+            '<span>금액</span>' +
+            '<div class="amt" data-amt="1">0원</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cost-line">' +
+          '<span>매입원가</span>' +
+          '<input class="row-cost" type="text" inputmode="numeric" value="' + (it.cost ? won(it.cost) : '') + '" placeholder="0" aria-label="매입원가">' +
+          '<span class="row-profit" data-profit="1"></span>' +
+        '</div>' +
+      '</div>';
+  }
+
   function syncRows(focusId, focusSelector) {
     var rowsEl = $('#rows');
     rowsEl.innerHTML = Q().items.map(rowHtml).join('');
@@ -882,6 +1083,8 @@
 
   /* ── 렌더: 합계/마진 ──────────────────── */
   function updateTotals() {
+    // 평형 자동 배선을 카메라 수량에 맞춰 먼저 맞춘다(행이 생기거나 사라지면 화면 다시 그리기).
+    if (refreshBandWire()) syncRows();
     var c = compute();
 
     Q().items.forEach(function (it) {
@@ -924,6 +1127,8 @@
 
     $('#emptyState').style.display = Q().items.length ? 'none' : 'block';
 
+    refreshBandDom();
+    updateBandNote();
     renderPrint(c);
     save();
   }
@@ -1201,6 +1406,33 @@
 
     $('#addRowBtn2').addEventListener('click', addRow);
 
+    // 평형 버튼 (신규 설치 전용) — 같은 버튼을 다시 탭하면 해제
+    var bandBox = $('#bandBox');
+    if (bandBox) {
+      bandBox.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-band]');
+        if (!btn) return;
+        var key = btn.getAttribute('data-band') || '';
+        if (!bandDef(key)) key = '';
+        if (key === Q().band) key = '';
+        Q().band = key;
+        refreshBandWire();
+        renderBands();
+        syncRows();
+        updateTotals();
+        var def = bandDef(Q().band);
+        if (def) {
+          var cams = cameraCount();
+          var m = Math.round(cams * def.per);
+          toast(cams > 0
+            ? def.label + ' — 카메라 ' + qtyText(cams) + '대 × ' + def.per + 'm = ' + won(m) + 'm 추가 배선'
+            : def.label + ' 선택 — 카메라를 담으면 추가 배선이 자동 계산됩니다');
+        } else {
+          toast('평형 자동 계산을 해제했어요');
+        }
+      });
+    }
+
     $('#copyBtn').addEventListener('click', function () { copyText(summaryText()); });
     $('#previewBtn').addEventListener('click', function () { openModal('카톡 요약', summaryText()); });
     $('#printBtn').addEventListener('click', function () {
@@ -1235,6 +1467,7 @@
       if (t.classList.contains('row-name')) {
         it.name = t.value;
         renderPrint(compute()); save();
+        if (Q().band) scheduleBandRefresh();
       } else if (t.classList.contains('row-price')) {
         it.price = formatMoneyInput(t);
         updateTotals();
@@ -1253,10 +1486,15 @@
       var it = findItem(id);
       if (!it) return;
       if (e.target.closest('[data-del]')) {
+        if (it.auto === 'band') {
+          Q().band = '';
+          renderBands();
+          toast('평형 자동 계산을 해제했어요');
+        }
         Q().items = Q().items.filter(function (x) { return x.id !== id; });
         syncRows();
         updateTotals();
-        toast('품목을 삭제했어요');
+        if (it.auto !== 'band') toast('품목을 삭제했어요');
         return;
       }
       var stepBtn = e.target.closest('[data-step]');
@@ -1309,6 +1547,13 @@
       return true;
     });
     return keep;
+  }
+
+  // 품명을 고쳐 카메라로 인식될 때 — 타이핑 중 화면이 튀지 않게 잠깐 쉬었다 맞춘다.
+  var bandTimer = null;
+  function scheduleBandRefresh() {
+    if (bandTimer) clearTimeout(bandTimer);
+    bandTimer = setTimeout(function () { bandTimer = null; updateTotals(); }, 700);
   }
 
   function addRow() {
